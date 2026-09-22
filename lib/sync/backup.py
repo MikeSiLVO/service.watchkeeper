@@ -195,11 +195,12 @@ def _record_fields(cursor: Any, kind: str, media_id: int, details: Dict[str, Any
 
 def sweep(cursor: Any, stamp: Optional[int] = None,
           should_stop: Optional[Callable[[], bool]] = None) -> Dict[str, int]:
-    """Back up the whole library, committing per item, and count the items whose dbid moved."""
+    """Back up the whole library, committing per item, and count the records whose item moved."""
     when = stamp_now() if stamp is None else stamp
     device = device_id()
     shows: Dict[int, int] = {}
     unread: Dict[int, Dict[str, Any]] = {}
+    seen: set = set()
     counts = {"moved": 0}
     for kind in ("tvshow", "movie", "episode"):
         done = 0
@@ -218,8 +219,9 @@ def sweep(cursor: Any, stamp: Optional[int] = None,
                 continue
             if kind == "tvshow":
                 shows[dbid] = media_id
-            if _dbid_changed(cursor, media_id, dbid):
+            if _dbid_changed(cursor, media_id, dbid) and media_id not in seen:
                 counts["moved"] += 1
+            seen.add(media_id)
             _record_fields(cursor, kind, media_id, details, when, device, False, "sweep")
             cursor.connection.commit()
             done += 1
