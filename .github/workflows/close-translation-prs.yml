@@ -1,0 +1,22 @@
+name: Close Translation Pull Requests
+
+on:
+  pull_request_target:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to check (and close if translation-only)'
+        required: true
+        type: string
+
+jobs:
+  close-translation-prs:
+    if: github.repository == 'MikeSiLVO/service.watchkeeper'
+    permissions:
+      issues: write
+      pull-requests: write
+    uses: MikeSiLVO/workflows/.github/workflows/close-translation-prs.yml@v2.0.0
+    with:
+      pr_number: ${{ github.event.inputs.pr_number }}
+    secrets: inherit

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="service.watchkeeper"
+	   name="Watchkeeper"
+	   version="0.2.0~beta1"
+	   provider-name="MikeSiLVO">
+	<requires>
+		<import addon="xbmc.python" version="3.0.1" />
+		<import addon="xbmc.json" version="13.5.0" />
+	</requires>
+	<extension point="xbmc.service" library="service.py" />
+	<extension point="xbmc.python.script" library="script.py">
+		<provides>executable</provides>
+	</extension>
+	<extension point="kodi.context.item">
+		<menu id="kodi.core.main">
+			<item library="context.py">
+				<label>$ADDON[service.watchkeeper 32001]</label>
+				<visible>Addon.SettingBool(service.watchkeeper,context_menu) + !String.IsEmpty(ListItem.DBID) + [String.IsEqual(ListItem.DBType,movie) | String.IsEqual(ListItem.DBType,tvshow)]</visible>
+			</item>
+		</menu>
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<summary lang="en_GB">Keeps your watched history, resume points and ratings through a library rebuild</summary>
+		<description lang="en_GB">Watchkeeper keeps watch over play counts, resume points and user ratings, recording them as they change and putting them back after a library rebuild. It runs as a service. A restore can also be run from Programs or from a movie or show's context menu, and undone.</description>
+		<platform>all</platform>
+		<license>GPL-3.0-only</license>
+		<source>https://github.com/MikeSiLVO/service.watchkeeper</source>
+		<assets>
+			<icon>icon.png</icon>
+			<fanart>fanart.jpg</fanart>
+		</assets>
+		<news>
+0.2.0~beta1
+- Saves play counts, last played times, resume points and user ratings as you watch
+- Puts them back after a library rebuild, matched on unique id so a rename or a move survives
+- Fills the library back in on its own once a rebuild settles, only where Kodi holds nothing
+- Restores everything from Programs, or one movie or show from its context menu
+- Undoes any restore, including one it made itself
+- Moves your saved data to another install, and merges one back in
+- Exports a readable list of everything saved
+		</news>
+	</extension>
+</addon>

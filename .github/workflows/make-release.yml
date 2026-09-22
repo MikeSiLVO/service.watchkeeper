@@ -1,0 +1,14 @@
+name: Make Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    if: github.repository == 'MikeSiLVO/service.watchkeeper'
+    permissions:
+      contents: write
+    uses: MikeSiLVO/workflows/.github/workflows/make-release.yml@v2.0.0
+    secrets: inherit
