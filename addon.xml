@@ -20,8 +20,6 @@
 		</menu>
 	</extension>
 	<extension point="xbmc.addon.metadata">
-		<summary lang="en_GB">Keeps your watched history, resume points and ratings through a library rebuild</summary>
-		<description lang="en_GB">Watchkeeper keeps watch over play counts, resume points and user ratings, recording them as they change and putting them back after a library rebuild. It runs as a service. A restore can also be run from Programs or from a movie or show's context menu, and undone.</description>
 		<platform>all</platform>
 		<license>GPL-3.0-only</license>
 		<source>https://github.com/MikeSiLVO/service.watchkeeper</source>
@@ -39,5 +37,7 @@
 - Moves your saved data to another install, and merges one back in
 - Exports a readable list of everything saved
 		</news>
+		<summary lang="en_GB">Keeps your watched history, resume points and ratings through a library rebuild</summary>
+		<description lang="en_GB">Watchkeeper keeps watch over play counts, resume points and user ratings, recording them as they change and putting them back after a library rebuild. It runs as a service. A restore can also be run from Programs or from a movie or show&apos;s context menu, and undone.</description>
 	</extension>
 </addon>
