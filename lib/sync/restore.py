@@ -54,10 +54,14 @@ def _plan_watched(record: Dict[str, Any], current: Dict[str, Any], force: bool,
         return
     if not held and not force:
         return
+    watched = current.get("playcount") or 0
+    if not force and watched > held:
+        # a higher count is plays we never saw, whatever the dates say
+        return
     ours, theirs = record.get("lastplayed") or "", current.get("lastplayed") or ""
     if not force and theirs >= ours and not _unwatched(current):
         return
-    if held == current.get("playcount", 0) and ours == theirs:
+    if held == watched and ours[:16] == theirs[:16]:
         return
     changes["playcount"] = held
     if ours:
