@@ -210,8 +210,8 @@ def _log_shared_record(run: "Run", kind: str, dbid: int, media_id: int,
         return
     first = run.claimed.setdefault(media_id, dbid)
     if first != dbid:
-        log("record {0} matches {1} dbid {2} and dbid {3}, \"{4}\" cannot be told from the "
-            "other by id".format(media_id, kind, first, dbid, details.get("title")))
+        log("\"{0}\" is in the library twice, {1} dbid {2} and dbid {3}, both saved as "
+            "record {4}".format(details.get("title"), kind, first, dbid, media_id))
 
 
 def restore_state(cursor: Any, kind: str, details: Dict[str, Any], state: Dict[str, Any],
@@ -361,7 +361,8 @@ def undo_batch(cursor: Any, batch: int,
             append_history(cursor, media_id, group, _values_from_row(group, values), stamp, device,
                            "restore", undoing)
         cursor.connection.commit()
-    log("undid restore {0}: {1}".format(batch, counts))
+    log("undid restore {0}, putting back {1} of {2} items".format(
+        batch, counts["restored"], counts["checked"]))
     return counts
 
 

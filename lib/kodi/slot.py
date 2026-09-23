@@ -57,7 +57,7 @@ def holder() -> str:
     late = time.time() - (held.get("beat") or 0)
     if late <= STALE:
         return held.get("name") or ""
-    log("clearing the writing slot, {0} stopped beating {1:.0f}s ago".format(
+    log("clearing the writing slot, {0} last reported {1:.0f}s ago".format(
         held.get("name"), late))
     _clear()
     return ""

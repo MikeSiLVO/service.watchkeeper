@@ -25,7 +25,7 @@ def main() -> None:
     path = database_path()
     try:
         open_database(path)
-        log("opened {0}, holding {1}".format(path, holdings()))
+        log("opened {0}".format(path))
         if action in ACTIONS:
             _run_action(action)
             return
@@ -73,7 +73,7 @@ def _restore_all() -> None:
     log("snapshot before restoring: {0}".format(os.path.basename(taken) or "none needed"))
     with get_db() as cursor, progress(text(32007)) as bar:
         counts = restore_library(cursor, bar.step, batch=next_batch(cursor))
-    log("restored from what we hold: {0}".format(counts))
+    log("restored {0} of {1} items checked".format(counts["restored"], counts["checked"]))
     if not counts["restored"]:
         with get_db() as cursor:
             undoable = bool(undoable_restores(cursor, 1))
@@ -92,7 +92,9 @@ def backup() -> None:
         with get_db() as cursor:
             counts = sweep(cursor)
     taken = snapshot()
-    log("backed up {0}, snapshot {1}".format(counts, os.path.basename(taken) or "none needed"))
+    log("backed up {0} movies, {1} shows, {2} episodes; snapshot {3}".format(
+        counts.get("movie", 0), counts.get("tvshow", 0), counts.get("episode", 0),
+        os.path.basename(taken) or "none needed"))
     notify(text(32010).format(counts.get("movie", 0), counts.get("episode", 0)))
 
 

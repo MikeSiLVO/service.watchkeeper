@@ -24,7 +24,8 @@ WRITING = "the context menu"
 def main() -> None:
     """Restore the item the menu was opened on, after asking."""
     kind, dbid = _chosen_item()
-    log("context menu on {0} dbid {1}".format(kind or "nothing", dbid))
+    log("context menu on {0}".format(
+        "{0} dbid {1}".format(kind, dbid) if kind and dbid else "an item Kodi did not name"))
     if not kind or not dbid:
         notify(text(32016))
         return

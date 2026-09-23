@@ -60,7 +60,7 @@ def _local_copy(picked: str) -> str:
     target = os.path.join(os.path.dirname(database_path()), INCOMING_NAME)
     _discard(target)
     if not xbmcvfs.copy(picked, target):
-        log("could not copy {0} here".format(picked))
+        log("could not copy {0} into the addon folder".format(picked))
         return ""
     return target
 

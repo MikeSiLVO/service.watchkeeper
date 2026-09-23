@@ -44,7 +44,7 @@ def candidates(cursor: sqlite3.Cursor, kind: str, ids: Dict[str, str]) -> List[i
     for media_id in sorted(row[0] for row in cursor.fetchall()):
         clash = _clash(cursor, media_id, ids)
         if clash:
-            log("refused {0} record {1}, {2}".format(kind, media_id, clash))
+            log("record {0} is not this {1}: {2}".format(media_id, kind, clash))
         else:
             kept.append(media_id)
     return kept
@@ -60,7 +60,8 @@ def _clash(cursor: sqlite3.Cursor, media_id: int, ids: Dict[str, str]) -> str:
     """Name the first id the record and the item disagree on, or empty when they agree."""
     for id_type, value in ids_of(cursor, media_id):
         if ids.get(id_type, value) != value:
-            return "its {0} {1} is not the item's {2}".format(id_type, value, ids[id_type])
+            return "record has {0} {1}, the library item has {2}".format(
+                id_type, value, ids[id_type])
     return ""
 
 

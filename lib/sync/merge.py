@@ -43,7 +43,8 @@ def merge_database(cursor: Any, path: str, batch: Optional[int] = None) -> Dict[
             if record_group(cursor, media_id, group, values, stamp,
                             theirs.get("device") or "", "import", batch):
                 counts["changed"] += 1
-    log("merged {0} from {1}".format(counts, path))
+    log("merged {0} changes across {1} items, {2} of them new to us, from {3}".format(
+        counts["changed"], counts["items"], counts["new"], path))
     return counts
 
 

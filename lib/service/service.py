@@ -40,7 +40,9 @@ def main() -> None:
     path = database_path()
     open_database(path)
     held = holdings()
-    log("opened {0}, holding {1}".format(path, held))
+    log("opened {0}".format(path))
+    log("holding {0} movies, {1} shows, {2} episodes, {3} with watch history".format(
+        held.get("movie", 0), held.get("tvshow", 0), held.get("episode", 0), held["watched"]))
     queue = Queue()
     listener = Listener(queue)
     try:
@@ -162,7 +164,8 @@ def _fill() -> None:
         counts = restore_library(cursor, bar.step, batch=next_batch(cursor), filling=True,
                                  on_restore=bar.start)
         connection.commit()
-        log("filled {0}, {1} of them marked rebuilt".format(counts, marked))
+        log("filled {0} of {1} items checked, {2} were waiting after a rebuild".format(
+            counts["restored"], counts["checked"], marked))
     finally:
         bar.close()
         connection.close()
@@ -188,7 +191,10 @@ def run_sweep(should_stop: Callable[[], bool]) -> None:
         return
     ADDON.setSetting("last_swept", str(int(time.time())))
     taken = snapshot()
-    log("swept {0}, snapshot {1}".format(counts, os.path.basename(taken) or "none needed"))
+    log("swept {0} movies, {1} shows, {2} episodes, {3} with a new library id; "
+        "snapshot {4}".format(counts.get("movie", 0), counts.get("tvshow", 0),
+                              counts.get("episode", 0), counts["moved"],
+                              os.path.basename(taken) or "none needed"))
     if counts["moved"]:
         # a rebuild on another client sharing the library announces nothing here
         _settled = True
