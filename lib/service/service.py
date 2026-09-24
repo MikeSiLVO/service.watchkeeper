@@ -24,7 +24,9 @@ BACKLOG_INTERVAL = 0.1
 DRAIN_BATCH = 50
 SWEEP_INTERVAL = 6 * 60 * 60
 FILL_WAIT = 2 * 60
+PLAYBACK_REST = 3 * 60
 BROWSING = "Window.IsActive(videos)"
+PLAYING = "Player.HasVideo"
 FILLING = "the automatic fill"
 
 _pending = {}
@@ -32,6 +34,8 @@ _settled = False
 _waiting = 0.0
 _rebuilding = False
 _next_sweep = 0.0
+_played_at = float("-inf")
+_looked_at = float("-inf")
 
 
 def main() -> None:
@@ -59,7 +63,7 @@ def main() -> None:
                 if fill_due():
                     run_fill()
                 if sweep_due():
-                    run_sweep(listener.abortRequested)
+                    run_sweep(lambda: listener.abortRequested() or watching())
             except Exception:
                 import traceback
                 log("drain failed\n" + traceback.format_exc(), xbmc.LOGERROR)
@@ -69,8 +73,8 @@ def main() -> None:
 
 
 def drain(queue: Queue) -> None:
-    """Drain the queue: mark removals, note the library settling, capture up to a batch of items."""
-    global _rebuilding, _settled
+    """Drain the queue: mark removals, note a settled library or an ended video, capture a batch."""
+    global _rebuilding, _settled, _played_at
     removals = []
     while True:
         try:
@@ -85,6 +89,8 @@ def drain(queue: Queue) -> None:
             removals.append(gone)
         if library_settled(method):
             _settled = True
+        if method == "Player.OnStop":
+            _played_at = time.monotonic()
     if not _pending and not removals:
         return
     shows = {}
@@ -115,9 +121,12 @@ def drain(queue: Queue) -> None:
 
 
 def fill_due() -> bool:
-    """True once the library settled and nobody is writing; a video window defers it for a while."""
+    """True once the library settled, no video played lately, nobody writes; browsing defers it."""
     global _waiting
     if not _settled or xbmc.getCondVisibility("Library.IsScanningVideo"):
+        return False
+    if watching():
+        _waiting = 0.0
         return False
     if holder():
         return False
@@ -136,16 +145,29 @@ def fill_due() -> bool:
     return True
 
 
+def watching() -> bool:
+    """True while a video is open and for a rest after it closes, checked once a second at most."""
+    global _played_at, _looked_at
+    now = time.monotonic()
+    if now - _looked_at >= 1.0:
+        _looked_at = now
+        if xbmc.getCondVisibility(PLAYING):
+            _played_at = now
+    return now - _played_at < PLAYBACK_REST
+
+
 def run_fill() -> None:
     """Fill in what the library is missing, unless another run is writing."""
     global _rebuilding, _settled
     try:
         with claim(FILLING):
+            rebuilding = _rebuilding
             _settled = False
             _rebuilding = False
             _fill()
-            if stopping():
+            if stopping() or watching():
                 _settled = True
+                _rebuilding = rebuilding
     except SlotTaken as taken:
         log("not filling, {0} is writing".format(taken))
     except sqlite3.OperationalError:
@@ -156,11 +178,18 @@ def run_fill() -> None:
 def _fill() -> None:
     """Walk the library once on its own connection, never overwriting what Kodi holds."""
     bar = BackgroundProgress(addon_name(), text(32007))
+
+    def step(index: int, total: int, title: str) -> bool:
+        if watching():
+            log("giving up, a video started")
+            return False
+        return bar.step(index, total, title)
+
     connection = new_connection()
     try:
         cursor = connection.cursor()
         marked = count_rebuilt(cursor)
-        counts = restore_library(cursor, bar.step, batch=next_batch(cursor), filling=True,
+        counts = restore_library(cursor, step, batch=next_batch(cursor), filling=True,
                                  on_restore=bar.start)
         connection.commit()
         log("filled {0} of {1} items checked, {2} were waiting after a rebuild".format(
@@ -171,8 +200,8 @@ def _fill() -> None:
 
 
 def sweep_due() -> bool:
-    """True when a sweep is overdue and nothing is playing."""
-    return time.time() >= _next_sweep and not xbmc.getCondVisibility("Player.Playing")
+    """True when a sweep is overdue and no video has played lately."""
+    return time.time() >= _next_sweep and not watching()
 
 
 def run_sweep(should_stop: Callable[[], bool]) -> None:
@@ -186,7 +215,12 @@ def run_sweep(should_stop: Callable[[], bool]) -> None:
         connection.commit()
     finally:
         connection.close()
+    if counts["moved"]:
+        # a rebuild on another client sharing the library announces nothing here
+        _settled = True
     if should_stop():
+        log("sweep cut short, trying again later")
+        _next_sweep = time.time()
         return
     ADDON.setSetting("last_swept", str(int(time.time())))
     taken = snapshot()
@@ -194,9 +228,6 @@ def run_sweep(should_stop: Callable[[], bool]) -> None:
         "snapshot {4}".format(counts.get("movie", 0), counts.get("tvshow", 0),
                               counts.get("episode", 0), counts["moved"],
                               os.path.basename(taken) or "none needed"))
-    if counts["moved"]:
-        # a rebuild on another client sharing the library announces nothing here
-        _settled = True
 
 
 def _last_swept() -> float:
