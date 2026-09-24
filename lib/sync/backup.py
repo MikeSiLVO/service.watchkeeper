@@ -219,7 +219,7 @@ def sweep(cursor: Any, stamp: Optional[int] = None,
                 continue
             if kind == "tvshow":
                 shows[dbid] = media_id
-            if _dbid_changed(cursor, media_id, dbid) and media_id not in seen:
+            if media_id not in seen and _dbid_changed(cursor, media_id, dbid):
                 counts["moved"] += 1
             seen.add(media_id)
             _record_fields(cursor, kind, media_id, details, when, device, False, "sweep")
