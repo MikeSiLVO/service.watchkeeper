@@ -12,7 +12,7 @@ from lib.data.database import (DatabaseBusy, close_database, count_rebuilt, get_
                                mark_rebuilt, new_connection, next_batch, open_database,
                                snapshot, stamp_now)
 from lib.kodi.client import ADDON, Listener, log
-from lib.kodi.dialogs import BackgroundProgress, addon_name, notify, text
+from lib.kodi.dialogs import BackgroundProgress, addon_name, text
 from lib.kodi.slot import SlotTaken, claim, holder, stopping
 from lib.kodi.utilities import database_path, wait_for_kodi_ready
 from lib.sync.backup import (backup_item, library_settled, announced_item,
@@ -115,7 +115,7 @@ def drain(queue: Queue) -> None:
 
 
 def fill_due() -> bool:
-    """True once the library settled, nobody else is writing, and no video window is in the way."""
+    """True once the library settled and nobody is writing; a video window defers it for a while."""
     global _waiting
     if not _settled or xbmc.getCondVisibility("Library.IsScanningVideo"):
         return False
@@ -129,7 +129,6 @@ def fill_due() -> bool:
     if not _waiting:
         _waiting = time.time()
         log("holding the fill back, a video window is open")
-        notify(text(32044))
         return False
     if time.time() - _waiting < FILL_WAIT:
         return False

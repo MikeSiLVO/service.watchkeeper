@@ -190,10 +190,6 @@ msgctxt "#32043"
 msgid "That file is not a Watchkeeper backup"
 msgstr ""
 
-msgctxt "#32044"
-msgid "Your data will be restored when you leave this window"
-msgstr ""
-
 msgctxt "#32045"
 msgid "Busy writing to the library, try again shortly"
 msgstr ""
