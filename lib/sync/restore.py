@@ -76,13 +76,17 @@ def _plan_watched(record: Dict[str, Any], current: Dict[str, Any], force: bool,
 
 def _plan_resume(record: Dict[str, Any], current: Dict[str, Any], force: bool,
                  changes: Dict[str, Any]) -> None:
-    """Plan the resume point, unless the library played more recently or already holds one."""
+    """Plan the resume point where the library holds none and never saw its play, unless forced."""
     position = int(record.get("resume_position") or 0)
     total = int(record.get("resume_total") or 0)
     if position <= 0 or (total and position > total):
         return
     theirs = current.get("resume") or {}
-    if not force and (current.get("lastplayed") or "") > (record.get("lastplayed") or ""):
+    # to the minute, Trakt zeroes the seconds
+    played = (current.get("lastplayed") or "")[:16]
+    seen = bool(played) and played >= (record.get("lastplayed") or "")[:16]
+    # a moved file never saw that play, whatever date a fill copied onto it
+    if not force and seen and _resume_from_here(record, current):
         return
     if not force and (theirs.get("position") or 0.0) > 0.0:
         return
@@ -156,14 +160,20 @@ def _plan_changes(cursor: Any, kind: str, media_id: int, details: Dict[str, Any]
 def _resume_belongs_here(record: Dict[str, Any], kind: str, details: Dict[str, Any],
                          run: Optional["Run"]) -> bool:
     """True when the resume came from this file, or from a file that has since left the library."""
-    wanted = record.get("resume_file")
-    if not wanted or short_file(details.get("file") or "") == wanted:
+    if _resume_from_here(record, details):
         return True
+    wanted = record["resume_file"]
     if run is not None and run.files is not None:
         return wanted not in run.files
     name = wanted.split("/")[-1]
     listed = list_items(kind, filter={"field": "filename", "operator": "is", "value": name})
     return wanted not in {short_file(item.get("file") or "") for item in listed}
+
+
+def _resume_from_here(record: Dict[str, Any], details: Dict[str, Any]) -> bool:
+    """True when this item is the file the resume came from, or the record never noted a file."""
+    wanted = record.get("resume_file")
+    return not wanted or short_file(details.get("file") or "") == wanted
 
 
 def _find_by_place(cursor: Any, details: Dict[str, Any],
