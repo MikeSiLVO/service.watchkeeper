@@ -1,7 +1,7 @@
 """Back up user data from the Kodi library as it changes."""
 
 import json
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from lib.data.database import (clear_rebuilt, is_rebuilt, read_state, record_group,
                                record_prior_state, stamp_now)
@@ -195,7 +195,7 @@ def _record_fields(cursor: Any, kind: str, media_id: int, details: Dict[str, Any
 
 def sweep(cursor: Any, stamp: Optional[int] = None,
           should_stop: Optional[Callable[[], bool]] = None) -> Dict[str, int]:
-    """Back up the whole library, committing per item, and count the records whose item moved."""
+    """Back up the library, merging copies, committing per item; count records whose item moved."""
     when = stamp_now() if stamp is None else stamp
     device = device_id()
     shows: Dict[int, int] = {}
@@ -203,7 +203,7 @@ def sweep(cursor: Any, stamp: Optional[int] = None,
     seen: set = set()
     counts = {"moved": 0}
     for kind in ("tvshow", "movie", "episode"):
-        done = 0
+        swept: List[Tuple[int, Dict[str, Any]]] = []
         for details in list_items(kind):
             if should_stop and should_stop():
                 return counts
@@ -222,11 +222,27 @@ def sweep(cursor: Any, stamp: Optional[int] = None,
             if media_id not in seen and _dbid_changed(cursor, media_id, dbid):
                 counts["moved"] += 1
             seen.add(media_id)
+            cursor.connection.commit()
+            swept.append((media_id, details))
+        merged = _merge_copies(swept) if kind in _WATCHABLE else {}
+        for media_id, details in swept:
+            if should_stop and should_stop():
+                return counts
+            details = dict(details, **merged.get(media_id, {}))
             _record_fields(cursor, kind, media_id, details, when, device, False, "sweep")
             cursor.connection.commit()
-            done += 1
-        counts[kind] = done
+        counts[kind] = len(swept)
     return counts
+
+
+def _merge_copies(swept: List[Tuple[int, Dict[str, Any]]]) -> Dict[int, Dict[str, Any]]:
+    """Merge the copies of each record into one play state, the highest count and newest date."""
+    merged: Dict[int, Dict[str, Any]] = {}
+    for media_id, details in swept:
+        held = merged.setdefault(media_id, {"playcount": 0, "lastplayed": ""})
+        held["playcount"] = max(held["playcount"], details.get("playcount") or 0)
+        held["lastplayed"] = max(held["lastplayed"], details.get("lastplayed") or "")
+    return merged
 
 
 def _resolve_swept(cursor: Any, kind: str, details: Dict[str, Any], shows: Dict[int, int],
