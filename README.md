@@ -2,6 +2,8 @@
 
 Keeps your watched history, resume points and ratings through a library rebuild.
 
+If you find this useful, [buy me a coffee](https://ko-fi.com/mikesilvo) ☕
+
 Watchkeeper records play counts, last played times, resume points and user ratings as they change,
 in one file of its own. It matches items by unique id rather than file path, so after a rebuild, a
 rescrape or a move to another drive it can write your data back into the library without touching
