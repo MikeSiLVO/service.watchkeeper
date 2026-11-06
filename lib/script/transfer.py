@@ -8,12 +8,13 @@ import xbmcvfs
 
 from lib.data.database import get_db, next_batch, snapshot
 from lib.kodi.client import log
-from lib.kodi.dialogs import choose_file, choose_folder, confirm, notify, text
-from lib.kodi.utilities import database_path
-from lib.sync.merge import merge_database
+from lib.kodi.dialogs import choose_file, choose_folder, confirm, notify, progress, text
+from lib.kodi.slot import WAIT, SlotTaken, claim
+from lib.sync.merge import discard, local_copy, merge_database
+from lib.sync.restore import restore_merged
 
 TRANSFER_NAME = "watchkeeper-{0}.db"
-INCOMING_NAME = "incoming.db"
+IMPORTING = "the import"
 
 
 def export_data() -> None:
@@ -33,41 +34,39 @@ def export_data() -> None:
 
 
 def import_data() -> None:
-    """Merge saved data from a file the user picks, keeping whichever side changed later."""
+    """Merge saved data from a file the user picks, then restore what changed into the library."""
     picked = choose_file(text(32039), ".db")
     if not picked:
         return
     if not confirm(text(32038), text(32040)):
         return
-    incoming = _local_copy(picked)
+    incoming = local_copy(picked)
     if not incoming:
         notify(text(32043))
         return
     try:
+        with claim(IMPORTING, WAIT):
+            _import(picked, incoming)
+    except SlotTaken as busy:
+        log("not importing, {0} is writing".format(busy))
+        notify(text(32045))
+    finally:
+        discard(incoming)
+
+
+def _import(picked: str, incoming: str) -> None:
+    """Merge a working copy, keeping whichever side changed later, and restore what changed."""
+    try:
         with get_db() as cursor:
-            counts = merge_database(cursor, incoming, next_batch(cursor))
+            batch = next_batch(cursor)
+            counts, before = merge_database(cursor, incoming, batch)
     except sqlite3.Error as error:
         log("{0} is not a watchkeeper backup: {1!r}".format(picked, error))
         notify(text(32043))
         return
-    finally:
-        _discard(incoming)
+    log("imported {0} changes across {1} items, {2} of them new to us, from {3}".format(
+        counts["changed"], counts["items"], counts["new"], picked))
+    if before:
+        with progress(text(32007)) as bar, get_db() as cursor:
+            restore_merged(cursor, before, batch, bar.step)
     notify(text(32042).format(counts["changed"], counts["items"]))
-
-
-def _local_copy(picked: str) -> str:
-    """Copy a chosen file next to our own, since SQLite cannot open one across the network."""
-    target = os.path.join(os.path.dirname(database_path()), INCOMING_NAME)
-    _discard(target)
-    if not xbmcvfs.copy(picked, target):
-        log("could not copy {0} into the addon folder".format(picked))
-        return ""
-    return target
-
-
-def _discard(path: str) -> None:
-    """Delete a working copy, and say nothing when it was never there."""
-    try:
-        os.remove(path)
-    except OSError:
-        pass

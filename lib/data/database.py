@@ -77,6 +77,12 @@ def stamp_now() -> int:
     return _stamp
 
 
+def advance_stamp(stamp: int) -> None:
+    """Advance later change stamps past one another install made."""
+    global _stamp
+    _stamp = max(_stamp, stamp)
+
+
 def close_database() -> None:
     """Close the shared connection, which also clears the -wal file."""
     global _connection
@@ -298,10 +304,19 @@ def snapshot(keep: int = SNAPSHOTS_KEPT, force: bool = False) -> str:
     if _connection is None:
         raise DatabaseBusy("database is not open")
     recent = snapshots()
-    if recent and not force and _fingerprint(recent[0]) == _fingerprint(_path):
+    if recent and not force and holds_same(recent[0]):
         return ""
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target_path = "{0}.{1}{2}".format(os.path.splitext(_path)[0], stamp, SNAPSHOT_SUFFIX)
+    copy_database(target_path)
+    _discard_old_snapshots(keep)
+    return target_path
+
+
+def copy_database(target_path: str) -> None:
+    """Copy the database into one self-contained file, replacing any file already there."""
+    if _connection is None:
+        raise DatabaseBusy("database is not open")
     with _lock:
         target = sqlite3.connect(target_path)
         try:
@@ -309,8 +324,17 @@ def snapshot(keep: int = SNAPSHOTS_KEPT, force: bool = False) -> str:
             target.execute("PRAGMA journal_mode = DELETE")
         finally:
             target.close()
-    _discard_old_snapshots(keep)
-    return target_path
+
+
+def holds_same(path: str) -> bool:
+    """True when a database file holds the same user data as ours."""
+    return os.path.exists(path) and _fingerprint(path) == _fingerprint(_path)
+
+
+def data_version() -> int:
+    """SQLite's marker that changes whenever another connection commits, read on the shared one."""
+    with get_db() as cursor:
+        return cursor.execute("PRAGMA data_version").fetchone()[0]
 
 
 def snapshots() -> list:

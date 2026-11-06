@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, NamedTuple, Optional, Set
 
 from lib.data.database import (append_history, batch_rows, clear_rebuilt, group_fields, media_row,
                                next_batch, note_dbid, read_state, stamp_now)
+from lib.data.schema import VALUE_FIELDS
 from lib.kodi.client import log, request
 from lib.kodi.utilities import device_id
 from lib.sync.backup import list_items, read_details, short_file
@@ -378,6 +379,70 @@ def undo_batch(cursor: Any, batch: int,
     log("undid restore {0}, putting back {1} of {2} items".format(
         batch, counts["restored"], counts["checked"]))
     return counts
+
+
+def restore_merged(cursor: Any, before: Dict[int, dict], batch: Optional[int] = None,
+                   on_step: Optional[Callable[[int, int, str], bool]] = None) -> Dict[str, int]:
+    """Restore what a merge changed, wherever the library still holds what we held before it."""
+    counts = {"restored": 0, "checked": 0}
+    for index, (media_id, groups) in enumerate(before.items()):
+        if on_step and not on_step(index, len(before), ""):
+            break
+        counts["checked"] += 1
+        item = media_row(cursor, media_id)
+        if not item or not item[1]:
+            continue
+        kind, dbid = item
+        details = read_details(kind, dbid)
+        if not details or find_record(cursor, kind, details) != media_id:
+            continue
+        changes = _merged_changes(cursor, kind, media_id, details, groups)
+        if _write(cursor, kind, dbid, media_id, details, changes, batch):
+            counts["restored"] += 1
+        cursor.connection.commit()
+    log("restored {0} of {1} items another install changed".format(
+        counts["restored"], counts["checked"]))
+    return counts
+
+
+def _merged_changes(cursor: Any, kind: str, media_id: int, details: Dict[str, Any],
+                    groups: Dict[str, tuple]) -> Dict[str, Any]:
+    """Plan the merged groups the library still holds as we held them, skipping any out of range."""
+    record = read_state(cursor, media_id)
+    row = tuple(record.get(field) for field in VALUE_FIELDS)
+    changes: Dict[str, Any] = {}
+    for group, held in groups.items():
+        if kind == "tvshow" and group != "userrating_changed":
+            continue
+        if group == "resume_changed" and not _resume_belongs_here(record, kind, details, None):
+            continue
+        values = _values_from_row(group, row)
+        wanted = _plain(group, values)
+        current = _plain(group, _values_from_details(group, details))
+        # Kodi holding anything else is a change we have not seen yet
+        if current == wanted or current != _plain(group, held) or not _in_range(group, values):
+            continue
+        changes.update(_params_from_row(group, row))
+    return changes
+
+
+def _plain(group: str, values: tuple) -> tuple:
+    """Reduce one field group's values to what tells two states apart."""
+    if group == "playcount_changed":
+        return (values[0] or 0, values[1] or "")
+    if group == "resume_changed":
+        return (round(values[0] or 0),)
+    return (values[0] or 0,)
+
+
+def _in_range(group: str, values: tuple) -> bool:
+    """True when one field group's values are ones Kodi can hold."""
+    if group == "userrating_changed":
+        return 0 <= (values[0] or 0) <= MAX_RATING
+    if group == "resume_changed":
+        position, total = values[0] or 0, values[1] or 0
+        return position >= 0 and (not total or position <= total)
+    return (values[0] or 0) >= 0
 
 
 def _params_from_row(group: str, values: tuple) -> Dict[str, Any]:

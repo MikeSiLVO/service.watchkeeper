@@ -171,13 +171,15 @@ def _record_fields(cursor: Any, kind: str, media_id: int, details: Dict[str, Any
     stored = read_state(cursor, media_id)
     held = {} if trust_empty else stored
     first = not stored
+    # a first capture is a change only when it carries data seen live
+    seeded = first and source == "sweep"
     if kind in _WATCHABLE:
         playcount = details.get("playcount") or 0
         if playcount or not (held.get("playcount") or 0):
             watched = (details.get("playcount"), details.get("lastplayed") or None)
             record_prior_state(cursor, media_id, "playcount_changed", watched, stored, device)
             record_group(cursor, media_id, "playcount_changed", watched, when, device, source,
-                         baseline=first)
+                         baseline=seeded or (first and not any(watched)))
         resume = details.get("resume") or {}
         position = resume.get("position") or 0.0
         if position or not (held.get("resume_position") or 0.0):
@@ -185,12 +187,12 @@ def _record_fields(cursor: Any, kind: str, media_id: int, details: Dict[str, Any
                        short_file(details.get("file") or "") if position else None)
             record_prior_state(cursor, media_id, "resume_changed", stopped, stored, device)
             record_group(cursor, media_id, "resume_changed", stopped, when, device, source,
-                         baseline=first)
+                         baseline=seeded or (first and not position))
     rating = details.get("userrating") or 0
     if rating or not (held.get("userrating") or 0):
         record_prior_state(cursor, media_id, "userrating_changed", (rating,), stored, device)
         record_group(cursor, media_id, "userrating_changed", (rating,), when, device, source,
-                     baseline=first)
+                     baseline=seeded or (first and not rating))
 
 
 def sweep(cursor: Any, stamp: Optional[int] = None,

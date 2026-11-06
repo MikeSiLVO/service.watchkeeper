@@ -17,6 +17,7 @@ from lib.kodi.slot import SlotTaken, claim, holder, stopping
 from lib.kodi.utilities import database_path, wait_for_kodi_ready
 from lib.sync.backup import (backup_item, library_settled, announced_item,
                              removed_item, sweep)
+from lib.sync.folder import keep_in_step, note_change
 from lib.sync.restore import restore_library
 
 DRAIN_INTERVAL = 1.0
@@ -64,6 +65,8 @@ def main() -> None:
                     run_fill()
                 if sweep_due():
                     run_sweep(lambda: listener.abortRequested() or watching())
+                if not _pending and not xbmc.getCondVisibility(PLAYING):
+                    keep_in_step(lambda: listener.abortRequested() or watching())
             except Exception:
                 import traceback
                 log("drain failed\n" + traceback.format_exc(), xbmc.LOGERROR)
@@ -107,6 +110,7 @@ def drain(queue: Queue) -> None:
                 try:
                     backup_item(cursor, kind, dbid, shows=shows)
                     cursor.connection.commit()
+                    note_change()
                 except sqlite3.OperationalError:
                     cursor.connection.rollback()
                     log("database locked, {0} items held for the next pass".format(len(_pending)))
@@ -205,7 +209,7 @@ def sweep_due() -> bool:
 
 
 def run_sweep(should_stop: Callable[[], bool]) -> None:
-    """Sweep the library on its own connection, snapshot, and fill if the sweep saw a rebuild."""
+    """Sweep the library on its own connection and snapshot; a rebuild it saw lets a fill run."""
     global _next_sweep, _settled
     _next_sweep = time.time() + SWEEP_INTERVAL
     connection = new_connection()
@@ -223,6 +227,7 @@ def run_sweep(should_stop: Callable[[], bool]) -> None:
         _next_sweep = time.time()
         return
     ADDON.setSetting("last_swept", str(int(time.time())))
+    note_change()
     taken = snapshot()
     log("swept {0} movies, {1} shows, {2} episodes, {3} with a new library id; "
         "snapshot {4}".format(counts.get("movie", 0), counts.get("tvshow", 0),

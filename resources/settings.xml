@@ -39,6 +39,27 @@
 					</control>
 				</setting>
 			</group>
+			<group id="3" label="32047">
+				<setting id="sync" type="boolean" label="32048" help="32049">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle" />
+				</setting>
+				<setting id="sync_folder" type="path" label="1012" parent="sync">
+					<level>0</level>
+					<default></default>
+					<constraints>
+						<allowempty>true</allowempty>
+						<writable>true</writable>
+					</constraints>
+					<dependencies>
+						<dependency type="enable" setting="sync">true</dependency>
+					</dependencies>
+					<control type="button" format="path">
+						<heading>1012</heading>
+					</control>
+				</setting>
+			</group>
 			<group id="2" label="32024">
 				<setting id="export_text" type="action" label="32020">
 					<control type="button" format="action">

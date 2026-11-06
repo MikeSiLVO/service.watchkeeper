@@ -175,7 +175,7 @@ msgid "Choose a saved data file"
 msgstr ""
 
 msgctxt "#32040"
-msgid "This merges another install's saved data into what Watchkeeper holds. If both changed an item, the newer change is kept. Continue?"
+msgid "This merges another install's saved data and puts its newer changes into the library. Continue?"
 msgstr ""
 
 msgctxt "#32041"
@@ -196,4 +196,16 @@ msgstr ""
 
 msgctxt "#32046"
 msgid "Could not write {0}"
+msgstr ""
+
+msgctxt "#32047"
+msgid "Sync with other installs"
+msgstr ""
+
+msgctxt "#32048"
+msgid "Sync through a shared folder"
+msgstr ""
+
+msgctxt "#32049"
+msgid "Keeps play counts, resume points and ratings the same on every install that uses this folder. Where two installs changed an item, the latest change wins."
 msgstr ""

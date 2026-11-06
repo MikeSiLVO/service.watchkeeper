@@ -15,6 +15,7 @@ the freshly scraped metadata. It runs as a service, so there is nothing to remem
 - Restores everything from Programs, or one movie or show from its context menu
 - Undoes any restore, including one it made by itself
 - Moves your saved data to another install, and merges one back in
+- Keeps several installs in step through a shared folder
 - Exports a readable list of everything saved
 
 ## Where your data lives
@@ -22,9 +23,9 @@ the freshly scraped metadata. It runs as a service, so there is nothing to remem
 `userdata/addon_data/service.watchkeeper/watchkeeper.db`, per Kodi profile. A few dated snapshots
 sit beside it as insurance against the file itself going bad.
 
-To carry your data to another install, use **Export your saved data to a file** in the addon's
-settings and **Import saved data from a file** on the other machine. An import merges rather than
-replaces: where both machines changed an item, the newer change is kept.
+To carry your data to another install, use **Export your saved data to a file** from Programs or the addon's settings, then **Import saved data from a file** on the other machine. An import merges rather than replaces: where both machines changed an item, the newer change is kept and put into the library.
+
+To keep several installs in step, turn on **Sync through a shared folder** on each one and pick the same folder. Each install keeps a file of its own there. A change made on one install reaches the others at their next startup, or within about a minute while they run. Where two installs changed the same item, the latest change wins.
 
 ## Limits worth knowing
 
