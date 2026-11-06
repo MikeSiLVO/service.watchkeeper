@@ -17,7 +17,7 @@ the freshly scraped metadata. It runs as a service, so there is nothing to remem
 - Restores everything from Programs, or one movie or show from its context menu
 - Undoes any restore, including one it made by itself
 - Moves your saved data to another install, and merges one back in
-- Keeps several installs in step through a shared folder
+- Keeps several installs in sync through a shared folder
 - Exports a readable list of everything saved
 
 ## Where your data lives
@@ -25,9 +25,23 @@ the freshly scraped metadata. It runs as a service, so there is nothing to remem
 `userdata/addon_data/service.watchkeeper/watchkeeper.db`, per Kodi profile. A few dated snapshots
 sit beside it as insurance against the file itself going bad.
 
+## Restoring
+
+After a rebuild, Watchkeeper fills the library back in by itself once the scan has finished and nothing has played for a few minutes. It only fills in what the library is missing: anything the library already holds is left alone, and a play count is never lowered.
+
+**Restore my data to the library** in Programs does the same for the whole library on demand.
+
+The **Watchkeeper** item in a movie's or TV show's context menu restores that one title, or a show and every episode under it. It then offers any earlier state the title was in, listed by date. Putting an earlier state back replaces what the library holds for that title. The item is on by default, under **Show the context menu item** in the addon's settings.
+
+Any restore can be undone, including one Watchkeeper made by itself. **Undo a restore** in Programs lists them newest first and puts back what the library held before the one you pick.
+
+## Moving between installs
+
 To carry your data to another install, use **Export your saved data to a file** from Programs or the addon's settings, then **Import saved data from a file** on the other machine. An import merges rather than replaces: where both machines changed an item, the newer change is kept and put into the library.
 
-To keep several installs in step, turn on **Sync through a shared folder** on each one and pick the same folder. Each install keeps a file of its own there. A change made on one install reaches the others at their next startup, or within about a minute while they run. Where two installs changed the same item, the latest change wins.
+To keep several installs in sync, turn on **Sync through a shared folder** under Export / Import in the addon's settings on each one, and pick the same folder. It can be any folder every install can write to, such as a network share. Each install keeps a file of its own there.
+
+Play counts, last played times, resume points and ratings all travel. A change made on one install reaches the others at their next startup, or within about a minute while they run. Changes from other installs wait until no video is playing. Where two installs changed the same item, the latest change wins.
 
 ## Limits worth knowing
 
