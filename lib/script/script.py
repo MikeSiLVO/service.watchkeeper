@@ -14,13 +14,13 @@ from lib.kodi.utilities import database_path
 from lib.sync.backup import sweep
 from lib.sync.restore import restore_library, undo_batch
 
-RESTORE, UNDO, BACK_UP, SUMMARY = 0, 1, 2, 3
+RESTORE, UNDO, BACK_UP, SUMMARY, EXPORT, IMPORT = range(6)
 WRITING = "the Programs menu"
 ACTIONS = ("export", "export_data", "import_data")
 
 
 def main() -> None:
-    """Run the named action, or offer the menu when none was named."""
+    """Run the named action, or offer the menu when the name matches none."""
     action = sys.argv[1] if len(sys.argv) > 1 else ""
     path = database_path()
     try:
@@ -29,7 +29,8 @@ def main() -> None:
         if action in ACTIONS:
             _run_action(action)
             return
-        chosen = choose(addon_name(), [text(32003), text(32026), text(32004), text(32005)])
+        chosen = choose(addon_name(), [text(32003), text(32026), text(32004), text(32005),
+                                       text(32037), text(32038)])
         if chosen == RESTORE:
             restore()
         elif chosen == UNDO:
@@ -38,6 +39,10 @@ def main() -> None:
             backup()
         elif chosen == SUMMARY:
             summary()
+        elif chosen == EXPORT:
+            _run_action("export_data")
+        elif chosen == IMPORT:
+            _run_action("import_data")
     except sqlite3.OperationalError as error:
         log("database locked: {0}".format(error))
         notify(text(32045))
