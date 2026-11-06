@@ -132,9 +132,11 @@ def confirm(heading: str, message: str) -> bool:
     return agreed
 
 
-def choose(heading: str, options: Sequence[str]) -> int:
-    """Ask the user to choose a label, returning its index or -1 when they back out."""
-    chosen = xbmcgui.Dialog().select(heading, list(options))
+def choose(heading: str, options: Sequence[str], preselect: int = -1) -> int:
+    """Ask the user to choose a label, returning its index or -1 if they back out or Kodi stops."""
+    if _MONITOR.abortRequested():
+        return -1
+    chosen = xbmcgui.Dialog().select(heading, list(options), preselect=preselect)
     log("menu \"{0}\": {1}".format(heading, options[chosen] if chosen >= 0 else "closed"))
     return chosen
 

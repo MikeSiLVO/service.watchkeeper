@@ -29,8 +29,19 @@ def main() -> None:
         if action in ACTIONS:
             _run_action(action)
             return
-        chosen = choose(addon_name(), [text(32003), text(32026), text(32004), text(32005),
-                                       text(32037), text(32038)])
+        _menu()
+    except sqlite3.OperationalError as error:
+        log("database locked: {0}".format(error))
+        notify(text(32045))
+    finally:
+        close_database()
+
+
+def _menu() -> None:
+    """Offer the menu, and again after each action, until the user backs out or Kodi stops."""
+    labels = [text(32003), text(32026), text(32004), text(32005), text(32037), text(32038)]
+    chosen = choose(addon_name(), labels)
+    while chosen >= 0:
         if chosen == RESTORE:
             restore()
         elif chosen == UNDO:
@@ -43,11 +54,7 @@ def main() -> None:
             _run_action("export_data")
         elif chosen == IMPORT:
             _run_action("import_data")
-    except sqlite3.OperationalError as error:
-        log("database locked: {0}".format(error))
-        notify(text(32045))
-    finally:
-        close_database()
+        chosen = choose(addon_name(), labels, chosen)
 
 
 def _run_action(action: str) -> None:
